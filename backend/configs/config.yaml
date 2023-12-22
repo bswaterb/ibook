@@ -1,0 +1,7 @@
+server:
+  port: :6000
+data:
+  mysql:
+    dsn:
+  redis:
+    addr:
