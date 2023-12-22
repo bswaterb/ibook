@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-volume-1
+spec:
+  storageClassName: mysql-volume
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/Users/bswaterb/Coding/k8s/gint/data/mysql"
+    # path: "/Users/bswaterb/Coding/go/ibook/k8s/mysql/data/"
+
+  

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gint-redis-deployment
+  labels:
+    app: gint-redis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gint-redis
+  template:
+    metadata:
+      name: gint-redis-pod
+      labels:
+        app: gint-redis
+    spec:
+      containers:
+        - name: gint-redis
+          image: redis:latest
+          ports:
+            - containerPort: 6379
+              name: redis
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      

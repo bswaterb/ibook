@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gint-server-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: gint-server
+  ports:
+    - port: 81
+      targetPort: 6000
+      protocol: TCP
+      name: http

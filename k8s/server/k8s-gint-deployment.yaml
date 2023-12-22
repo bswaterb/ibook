@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gint-server-deployment
+  labels:
+    app: gint-server-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gint-server
+  template:
+    metadata:
+      name: gint-server
+      labels:
+        app: gint-server
+    spec:
+      containers:
+        - name: gint-server
+          image: bswaterb/gint:0.0.1
+          ports:
+            - containerPort: 6000

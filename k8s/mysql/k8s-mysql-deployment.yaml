@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gint-mysql-deployment
+  labels:
+    app: gint-mysql-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gint-mysql
+  template:
+    metadata:
+      name: gint-mysql-pod
+      labels:
+        app: gint-mysql
+    spec:
+      containers:
+        - name: gint-mysql
+          image: mysql:latest
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: gint-mysql-storage
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+          imagePullPolicy: IfNotPresent
+      volumes:
+        - name: gint-mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-volume-1gb
+
+      restartPolicy: Always
+      
