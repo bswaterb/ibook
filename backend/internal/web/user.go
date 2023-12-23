@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"ibook/internal/service"
@@ -58,6 +59,13 @@ func (u *UserHandler) SignUp(context *gin.Context) {
 	}
 	user, err := u.svc.SignUp(context, req.Email, req.Password, req.ConfirmPassword)
 	if err != nil {
+		if errors.Is(err, service.UserAlreadyExistsErr) {
+			result.RespWithError(context, result.RECORD_ALREADY_EXISTS_CODE, "此邮箱已被注册", nil)
+			return
+		} else if errors.Is(err, service.PasswordNotEqualErr) {
+			result.RespWithError(context, result.TWO_PASSWORD_NOT_EQUAL_CODE, "两次输入的密码不一致", nil)
+			return
+		}
 		result.RespWithError(context, http.StatusInternalServerError, "服务故障，注册失败", nil)
 		log.Println(err)
 		return

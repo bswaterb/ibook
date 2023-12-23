@@ -15,6 +15,6 @@ import (
 )
 
 // wireApp init gin application.
-func wireApp(*conf.Secret, *conf.Data, *conf.Server) (*gin.Engine, func(), error) {
-	panic(wire.Build(data.DataProviderSet, web.WebProviderSet, service.ServiceProviderSet, newApp))
+func wireApp(*conf.Secret, *conf.MySQL, *conf.Redis, *conf.Server) (*gin.Engine, func(), error) {
+	panic(wire.Build(data.DataProviderSet, web.WebProviderSet, service.ServiceProviderSet, newMiddleware, newApp))
 }

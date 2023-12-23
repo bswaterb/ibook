@@ -2,8 +2,6 @@ package main
 
 import (
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"ibook/internal/conf"
@@ -16,7 +14,7 @@ import (
 
 func main() {
 	config := conf.GetConf()
-	server, cleanup, err := wireApp(config.SecretConf, config.DataConf, config.ServerConf)
+	server, cleanup, err := wireApp(config.SecretConf, config.DataConf.MysqlConf, config.DataConf.RedisConf, config.ServerConf)
 	if err != nil {
 		panic(err)
 	}
@@ -26,42 +24,32 @@ func main() {
 	}
 }
 
-func initWebServer() *gin.Engine {
-	server := gin.Default()
+func newApp(userHandler *web.UserHandler, middlewares []gin.HandlerFunc) *gin.Engine {
+	sever := gin.Default()
+	ug := sever.Group("/users")
+	userHandler.RegisterRoutesV1(ug)
+	sever.Use(middlewares...)
+	return sever
+}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: conf.GetConf().DataConf.RedisConf.Addr,
-	})
-	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
-
-	server.Use(cors.New(cors.Config{
+func newMiddleware(secret *conf.Secret, redisCli *redis.Client) []gin.HandlerFunc {
+	corsMw := cors.New(cors.Config{
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"x-jwt-token"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
 			if strings.HasPrefix(origin, "http://localhost") {
-				// 你的开发环境
 				return true
 			}
-			return strings.Contains(origin, conf.GetConf().ServerConf.Domain)
+			return strings.Contains(origin, "yourcompany.com")
 		},
 		MaxAge: 12 * time.Hour,
-	}))
-
-	store := memstore.NewStore([]byte("bswaterb1234567"),
-		[]byte("bswaterb7654321"))
-
-	server.Use(sessions.Sessions("mysession", store))
-	jwtauth.SetEncryptEnv(conf.GetConf().SecretConf.JwtConf.Key, conf.GetConf().SecretConf.JwtConf.LifeDurationTime)
-	server.Use(jwtauth.NewLoginJWTMiddlewareBuilder().
+	})
+	rlMw := ratelimit.NewBuilder(redisCli, time.Second, 100).Build()
+	jwtauth.SetEncryptEnv(secret.JwtConf.Key, secret.JwtConf.LifeDurationTime)
+	jwtMw := jwtauth.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").Build())
-	return server
-}
-
-func newApp(userHandler *web.UserHandler) *gin.Engine {
-	sever := gin.Default()
-	ug := sever.Group("/user")
-	userHandler.RegisterRoutesV1(ug)
-	return sever
+		IgnorePaths("/users/login").
+		Build()
+	return []gin.HandlerFunc{corsMw, rlMw, jwtMw}
 }

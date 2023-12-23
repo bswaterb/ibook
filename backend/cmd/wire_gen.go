@@ -17,12 +17,15 @@ import (
 // Injectors from wire.go:
 
 // wireApp init gin application.
-func wireApp(secret *conf.Secret, confData *conf.Data, server *conf.Server) (*gin.Engine, func(), error) {
-	dataData := data.NewData(confData)
+func wireApp(secret *conf.Secret, mySQL *conf.MySQL, redis *conf.Redis, server *conf.Server) (*gin.Engine, func(), error) {
+	db := data.NewMDB(mySQL)
+	client := data.NewRDB(redis)
+	dataData := data.NewData(db, client)
 	userRepo := data.NewUserRepo(dataData)
 	userService := service.NewUserService(userRepo)
 	userHandler := web.NewUserHandler(userService)
-	engine := newApp(userHandler)
+	v := newMiddleware(secret, client)
+	engine := newApp(userHandler, v)
 	return engine, func() {
 	}, nil
 }
