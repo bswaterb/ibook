@@ -1,0 +1,7 @@
+package result
+
+const (
+	PARAM_NOT_EQUAL_CODE    = 4000
+	PARAM_FORMAT_ERROR_CODE = 4001
+	PARAM_NOT_FULL_CODE     = 4002
+)

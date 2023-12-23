@@ -9,19 +9,22 @@ import (
 )
 
 var iBookConfig *Config
+var RELOAD = 1
 
 type Config struct {
-	ServerConf Server `yaml:"server"`
-	DataConf   Data   `yaml:"data"`
+	ServerConf *Server `yaml:"server"`
+	DataConf   *Data   `yaml:"data"`
+	SecretConf *Secret `yaml:"secret"`
 }
 
 type Server struct {
-	Port string `yaml:"port"`
+	Port   string `yaml:"port"`
+	Domain string `yaml:"domain"`
 }
 
 type Data struct {
-	MysqlConf MySQL `yaml:"mysql"`
-	RedisConf Redis `yaml:"redis"`
+	MysqlConf *MySQL `yaml:"mysql"`
+	RedisConf *Redis `yaml:"redis"`
 }
 
 type MySQL struct {
@@ -32,15 +35,22 @@ type Redis struct {
 	Addr string `yaml:"addr"`
 }
 
-func GetConf() *Config {
-	if iBookConfig == nil || iBookConfig.ServerConf.Port == "" {
+type Secret struct {
+	JwtConf *Jwt `yaml:"jwt"`
+}
+
+type Jwt struct {
+	Key              string `yaml:"key"`
+	LifeDurationTime int64  `yaml:"life_duration_time"`
+}
+
+func GetConf(flags ...int) *Config {
+	if iBookConfig == nil || (len(flags) != 0 && flags[0] == RELOAD) {
 		dir, err := filepath.Abs(filepath.Dir("./"))
 		if err != nil {
 			log.Fatal(err)
 		}
-		configPath := filepath.Join(dir, "backend", "configs", "config.yaml")
-		log.Printf("Loading config from: %s", configPath)
-		// confFile := "/Users/bswaterb/Coding/go/ibook/backend/configs/config.yaml"
+		configPath := filepath.Join(dir, "configs", "config.yaml")
 		yamlFile, err := os.Open(configPath)
 		if err != nil {
 			panic("配置文件未知错误: " + err.Error())

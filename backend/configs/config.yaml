@@ -1,7 +1,12 @@
 server:
   port: :6000
+  domain: bswater.cn
 data:
   mysql:
-    dsn:
+    dsn: root:qq781201407@tcp(127.0.0.1:3306)/ibook
   redis:
-    addr:
+    addr: redis://127.0.0.1:6379
+secret:
+  jwt:
+    key: "bswaterb12345678"
+    life_duration_time: 43200

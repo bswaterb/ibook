@@ -40,3 +40,5 @@ bin/
 
 # private data
 deploy/data/
+
+build-bin/
