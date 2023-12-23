@@ -39,6 +39,6 @@ bin/
 *.swp
 
 # private data
-backend/deploy/data/*
+./backend/deploy/data/
 
 build-bin/
