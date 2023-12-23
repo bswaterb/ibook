@@ -32,7 +32,8 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 	}
 }
 
-func (u *UserHandler) RegisterRoutesV1(ug *gin.RouterGroup) {
+func (u *UserHandler) RegisterRoutesV1(server *gin.Engine) {
+	ug := server.Group("/users")
 	ug.GET("/profile", u.Profile)
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/login", u.Login)
@@ -66,7 +67,7 @@ func (u *UserHandler) SignUp(context *gin.Context) {
 			result.RespWithError(context, result.TWO_PASSWORD_NOT_EQUAL_CODE, "两次输入的密码不一致", nil)
 			return
 		}
-		result.RespWithError(context, http.StatusInternalServerError, "服务故障，注册失败", nil)
+		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "服务内部异常，请联系管理员", nil)
 		log.Println(err)
 		return
 	}
@@ -78,9 +79,35 @@ func (u *UserHandler) SignUp(context *gin.Context) {
 }
 
 func (u *UserHandler) Login(context *gin.Context) {
-	context.JSON(http.StatusOK, gin.H{
-		"code": http.StatusAccepted,
-		"msg":  "功能待完善",
+	req := &UserLoginReq{}
+	if err := request.ParseRequestBody(context, req); err != nil {
+		result.RespWithError(context, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	if err := ValidateUserLoginReq(req); err != nil {
+		result.RespWithError(context, result.PARAM_NOT_FULL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	if ok, _ := u.emailExp.MatchString(req.Email); !ok {
+		result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "邮箱或密码格式错误", nil)
+		return
+	}
+	if ok, _ := u.passwordExp.MatchString(req.Password); !ok {
+		result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "邮箱或密码格式错误", nil)
+		return
+	}
+	user, err := u.svc.Login(context, req.Email, req.Password)
+	if err != nil {
+		if errors.Is(err, service.UserNotExistsErr) || errors.Is(err, service.PasswordNotRightErr) {
+			result.RespWithError(context, result.EMAIL_OR_PASSWORD_ERROR_CODE, "用户名或密码错误", nil)
+			return
+		}
+		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "服务内部异常，请联系管理员", nil)
+	}
+	result.RespWithSuccess(context, "注册成功", &UserLoginResp{
+		UserId: user.Id,
+		Email:  user.Email,
+		Token:  jwtauth.GenerateToken(user.Id),
 	})
 }
 

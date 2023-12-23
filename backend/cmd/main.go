@@ -26,9 +26,9 @@ func main() {
 
 func newApp(userHandler *web.UserHandler, middlewares []gin.HandlerFunc) *gin.Engine {
 	sever := gin.Default()
-	ug := sever.Group("/users")
-	userHandler.RegisterRoutesV1(ug)
 	sever.Use(middlewares...)
+	// 注册 /users/*** 路由
+	userHandler.RegisterRoutesV1(sever)
 	return sever
 }
 

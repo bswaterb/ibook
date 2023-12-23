@@ -10,6 +10,7 @@ var (
 	UserAlreadyExistsErr = errors.New("该用户已存在")
 	UserNotExistsErr     = errors.New("该用户不存在")
 	UserCreateErr        = errors.New("用户创建失败，请联系管理员")
+	PasswordNotRightErr  = errors.New("密码不符")
 )
 
 type UserRepo interface {
@@ -42,6 +43,17 @@ func (s *UserService) SignUp(ctx *gin.Context, email string, password string, co
 			return nil, UserAlreadyExistsErr
 		}
 		return nil, UserCreateErr
+	}
+	return user, nil
+}
+
+func (s *UserService) Login(context *gin.Context, email string, password string) (*User, error) {
+	user, err := s.ur.FindUserByEmail(email)
+	if err != nil && errors.Is(err, UserNotExistsErr) {
+		return nil, UserNotExistsErr
+	}
+	if user.PassWord != password {
+		return nil, PasswordNotRightErr
 	}
 	return user, nil
 }

@@ -20,10 +20,14 @@ type myClaims struct {
 }
 
 func GenerateToken(userId int64) string {
-	lifeTime := time.Now().Add(time.Duration(int64(time.Second) * lifeDurationSeconds))
+	now := time.Now().UTC()
+	lifeTime := now.Add(time.Duration(int64(time.Second) * lifeDurationSeconds))
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, myClaims{
-		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(lifeTime)},
-		userId:           userId,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(lifeTime),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
+		userId: userId,
 	})
 	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
@@ -85,9 +89,9 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
-		now := time.Now()
+		now := time.Now().UTC()
 		// 每十秒钟刷新一次
-		if claims.ExpiresAt.Sub(now) < time.Second*50 {
+		if claims.IssuedAt.Sub(now) < -time.Second*10 {
 			newToken := GenerateToken(claims.userId)
 			ctx.Header("x-jwt-token", newToken)
 		}
@@ -100,4 +104,5 @@ func unAuthorized(ctx *gin.Context) {
 		"code": http.StatusUnauthorized,
 		"msg":  "未认证无法访问此接口",
 	})
+	ctx.Abort()
 }

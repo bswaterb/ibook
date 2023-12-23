@@ -49,7 +49,8 @@ func (ur *userRepo) FindUserByEmail(email string) (*service.User, error) {
 		return nil, res.Error
 	}
 	return &service.User{
-		Id:    u.Id,
-		Email: u.Email,
+		Id:       u.Id,
+		Email:    u.Email,
+		PassWord: u.Password,
 	}, nil
 }
