@@ -32,7 +32,7 @@ func newApp(userHandler *web.UserHandler, middlewares []gin.HandlerFunc) *gin.En
 	return sever
 }
 
-func newMiddleware(secret *conf.Secret, redisCli *redis.Client) []gin.HandlerFunc {
+func newMiddleware(secret *conf.Secret, redisCli redis.Cmdable) []gin.HandlerFunc {
 	corsMw := cors.New(cors.Config{
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"x-jwt-token"},

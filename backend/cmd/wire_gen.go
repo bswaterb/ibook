@@ -19,12 +19,13 @@ import (
 // wireApp init gin application.
 func wireApp(secret *conf.Secret, mySQL *conf.MySQL, redis *conf.Redis, server *conf.Server) (*gin.Engine, func(), error) {
 	db := data.NewMDB(mySQL)
-	client := data.NewRDB(redis)
-	dataData := data.NewData(db, client)
+	cmdable := data.NewRDB(redis)
+	dataData := data.NewData(db, cmdable)
 	userRepo := data.NewUserRepo(dataData)
-	userService := service.NewUserService(userRepo)
+	userCache := data.NewUserCache(cmdable)
+	userService := service.NewUserService(userRepo, userCache)
 	userHandler := web.NewUserHandler(userService)
-	v := newMiddleware(secret, client)
+	v := newMiddleware(secret, cmdable)
 	engine := newApp(userHandler, v)
 	return engine, func() {
 	}, nil

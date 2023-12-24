@@ -10,6 +10,7 @@ import (
 	"ibook/pkg/utils/result"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type UserHandler struct {
@@ -34,7 +35,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 
 func (u *UserHandler) RegisterRoutesV1(server *gin.Engine) {
 	ug := server.Group("/users")
-	ug.GET("/profile", u.Profile)
+	ug.POST("/profile", u.Profile)
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/login", u.Login)
 	ug.POST("/edit", u.Edit)
@@ -104,7 +105,7 @@ func (u *UserHandler) Login(context *gin.Context) {
 		}
 		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "服务内部异常，请联系管理员", nil)
 	}
-	result.RespWithSuccess(context, "注册成功", &UserLoginResp{
+	result.RespWithSuccess(context, "登录成功", &UserLoginResp{
 		UserId: user.Id,
 		Email:  user.Email,
 		Token:  jwtauth.GenerateToken(user.Id),
@@ -112,9 +113,33 @@ func (u *UserHandler) Login(context *gin.Context) {
 }
 
 func (u *UserHandler) Profile(context *gin.Context) {
-	context.JSON(http.StatusOK, gin.H{
-		"code": http.StatusAccepted,
-		"msg":  "功能待完善",
+	req := &UserProfileReq{}
+	if err := request.ParseRequestBody(context, req); err != nil {
+		result.RespWithError(context, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	if err := ValidateUserProfileReq(req); err != nil {
+		result.RespWithError(context, result.PARAM_NOT_FULL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	userId, err := strconv.Atoi(req.UserId)
+	if err != nil {
+		result.RespWithError(context, result.PARAM_NOT_FULL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	res, err := u.svc.Profile(context, int64(userId))
+	if err != nil {
+		if errors.Is(err, service.UserNotExistsErr) {
+			result.RespWithError(context, result.USER_DO_NOT_EXISTS_CODE, "用户不存在", nil)
+			return
+		}
+		log.Println(err)
+		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "服务内部异常，请联系管理员", nil)
+		return
+	}
+	result.RespWithSuccess(context, "获取成功", &UserProfileResp{
+		UserId: res.Id,
+		Email:  res.Email,
 	})
 }
 

@@ -10,14 +10,14 @@ import (
 )
 
 // DataProviderSet is data providers.
-var DataProviderSet = wire.NewSet(NewData, NewUserRepo, NewMDB, NewRDB)
+var DataProviderSet = wire.NewSet(NewData, NewUserRepo, NewUserCache, NewMDB, NewRDB)
 
 type Data struct {
-	rdb *redis.Client
+	rdb redis.Cmdable
 	mdb *gorm.DB
 }
 
-func NewData(mdb *gorm.DB, rdb *redis.Client) *Data {
+func NewData(mdb *gorm.DB, rdb redis.Cmdable) *Data {
 	return &Data{
 		rdb: rdb,
 		mdb: mdb,
@@ -36,32 +36,7 @@ func NewMDB(mConf *conf.MySQL) *gorm.DB {
 	return db
 }
 
-func NewRDB(rConf *conf.Redis) *redis.Client {
-	url, err := redis.ParseURL(rConf.Addr)
-	if err != nil {
-		panic(err)
-	}
-	rdb := redis.NewClient(url)
-	status := rdb.Ping(context.Background())
-	if _, err = status.Result(); err != nil {
-		panic("Redis初始化失败，检查Rdb服务状态")
-	}
-	return rdb
-}
-
-func initMDB(mConf *conf.MySQL) *gorm.DB {
-	db, err := gorm.Open(mysql.Open(mConf.DSN))
-	if err != nil {
-		panic("初始化 MySQL 连接失败: " + err.Error())
-	}
-	err = initTable(db)
-	if err != nil {
-		panic("MySQL 自动迁移失败: " + err.Error())
-	}
-	return db
-}
-
-func initRDB(rConf *conf.Redis) *redis.Client {
+func NewRDB(rConf *conf.Redis) redis.Cmdable {
 	url, err := redis.ParseURL(rConf.Addr)
 	if err != nil {
 		panic(err)

@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"github.com/google/wire"
+	"strconv"
 )
 
 // WebProviderSet is data providers.
@@ -35,6 +36,15 @@ type UserLoginResp struct {
 	Token  string `json:"token"`
 }
 
+type UserProfileReq struct {
+	UserId string `json:"userId"`
+}
+
+type UserProfileResp struct {
+	UserId int64  `json:"userId"`
+	Email  string `json:"email"`
+}
+
 func ValidateUserSignupReq(req *UserSignupReq) error {
 	if req.Email == "" || req.Password == "" || req.ConfirmPassword == "" {
 		return InvalidReqBodyErr
@@ -44,6 +54,17 @@ func ValidateUserSignupReq(req *UserSignupReq) error {
 
 func ValidateUserLoginReq(req *UserLoginReq) error {
 	if req.Email == "" || req.Password == "" {
+		return InvalidReqBodyErr
+	}
+	return nil
+}
+
+func ValidateUserProfileReq(req *UserProfileReq) error {
+	if req.UserId == "" {
+		return InvalidReqBodyErr
+	}
+	id, err := strconv.Atoi(req.UserId)
+	if err != nil || id <= 0 {
 		return InvalidReqBodyErr
 	}
 	return nil
