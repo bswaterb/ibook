@@ -37,7 +37,9 @@ func GenerateToken(userId int64) string {
 }
 
 type LoginJWTMiddlewareBuilder struct {
-	paths []string
+	paths               []string
+	secretKey           string
+	lifeDurationSeconds int64
 }
 
 func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {

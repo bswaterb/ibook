@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type UserHandler struct {
@@ -35,7 +36,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 
 func (u *UserHandler) RegisterRoutesV1(server *gin.Engine) {
 	ug := server.Group("/users")
-	ug.POST("/profile", u.Profile)
+	ug.GET("/profile/:userId", u.Profile)
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/login", u.Login)
 	ug.POST("/edit", u.Edit)
@@ -113,21 +114,18 @@ func (u *UserHandler) Login(context *gin.Context) {
 }
 
 func (u *UserHandler) Profile(context *gin.Context) {
-	req := &UserProfileReq{}
-	if err := request.ParseRequestBody(context, req); err != nil {
+	userId := context.Param("userId")
+	if strings.TrimSpace(userId) == "" {
 		result.RespWithError(context, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
 		return
 	}
-	if err := ValidateUserProfileReq(req); err != nil {
+	uId, err := strconv.Atoi(userId)
+	if err != nil || uId <= 0 {
 		result.RespWithError(context, result.PARAM_NOT_FULL_CODE, "请求传参或设置有误", nil)
 		return
 	}
-	userId, err := strconv.Atoi(req.UserId)
-	if err != nil {
-		result.RespWithError(context, result.PARAM_NOT_FULL_CODE, "请求传参或设置有误", nil)
-		return
-	}
-	res, err := u.svc.Profile(context, int64(userId))
+
+	res, err := u.svc.Profile(context, int64(uId))
 	if err != nil {
 		if errors.Is(err, service.UserNotExistsErr) {
 			result.RespWithError(context, result.USER_DO_NOT_EXISTS_CODE, "用户不存在", nil)
