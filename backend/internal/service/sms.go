@@ -1,12 +1,28 @@
 package service
 
-import "github.com/gin-gonic/gin"
+import (
+	"errors"
+	"github.com/gin-gonic/gin"
+)
 
-type ShortMessageRepo interface {
-	SendMessage(ctx *gin.Context, phoneNumber string, args []MsgArgs, values []MsgArgs) error
+var (
+	SMSSendTooManyErr = errors.New("短信发送太频繁")
+	SMSUnKnownErr     = errors.New("短信服务未知错误")
+)
+
+type SMSRepo interface {
+	SendMessage(ctx *gin.Context, tplId string, phoneNumbers []string, args []MsgArgs) error
+}
+
+type SMSService struct {
+	smsRepo SMSRepo
+}
+
+func NewSMSService(smsRepo SMSRepo) *SMSService {
+	return &SMSService{smsRepo: smsRepo}
 }
 
 type MsgArgs struct {
-	name  string
-	value string
+	Name  string
+	Value string
 }

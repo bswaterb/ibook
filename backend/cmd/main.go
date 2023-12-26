@@ -49,6 +49,8 @@ func newMiddleware(secret *conf.Secret, redisCli redis.Cmdable) []gin.HandlerFun
 	jwtauth.SetEncryptEnv(secret.JwtConf.Key, secret.JwtConf.LifeDurationTime)
 	jwtMw := jwtauth.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
+		IgnorePaths("/login_sms/send").
+		IgnorePaths("/login_sms").
 		IgnorePaths("/users/login").
 		Build()
 	return []gin.HandlerFunc{corsMw, rlMw, jwtMw}

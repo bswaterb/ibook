@@ -7,21 +7,26 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"ibook/internal/conf"
+	"ibook/internal/data/message"
+	"log"
 )
 
 // DataProviderSet is data providers.
-var DataProviderSet = wire.NewSet(NewData, NewUserRepo, NewUserCache, NewMDB, NewRDB)
+var DataProviderSet = wire.NewSet(NewData, NewUserRepo, NewVerifyCodeRepo, NewUserCache, NewMDB, NewRDB, message.NewMemSMSRepo)
 
 type Data struct {
 	rdb redis.Cmdable
 	mdb *gorm.DB
 }
 
-func NewData(mdb *gorm.DB, rdb redis.Cmdable) *Data {
+func NewData(mdb *gorm.DB, rdb redis.Cmdable) (*Data, func()) {
+	cleanup := func() {
+		log.Println("closing the data repo...")
+	}
 	return &Data{
 		rdb: rdb,
 		mdb: mdb,
-	}
+	}, cleanup
 }
 
 func NewMDB(mConf *conf.MySQL) *gorm.DB {

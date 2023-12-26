@@ -6,7 +6,8 @@ import "github.com/google/wire"
 var ServiceProviderSet = wire.NewSet(NewUserService)
 
 type User struct {
-	Id       int64  `json:"id"`
-	Email    string `json:"email"`
-	PassWord string
+	Id          int64
+	Email       string
+	PhoneNumber string
+	PassWord    string
 }

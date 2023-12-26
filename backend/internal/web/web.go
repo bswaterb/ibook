@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"github.com/google/wire"
+	"strings"
 )
 
 // WebProviderSet is data providers.
@@ -30,9 +31,10 @@ type UserLoginReq struct {
 }
 
 type UserLoginResp struct {
-	UserId int64  `json:"userId"`
-	Email  string `json:"email"`
-	Token  string `json:"token"`
+	UserId      int64  `json:"userId"`
+	PhoneNumber string `json:"phoneNumber"`
+	Email       string `json:"email"`
+	Token       string `json:"token"`
 }
 
 type UserProfileResp struct {
@@ -40,15 +42,38 @@ type UserProfileResp struct {
 	Email  string `json:"email"`
 }
 
+type UserSmsLoginSendReq struct {
+	PhoneNumber string `json:"phoneNumber"`
+}
+
+type UserSmsLoginReq struct {
+	PhoneNumber string `json:"phoneNumber"`
+	VerifyCode  string `json:"verifyCode"`
+}
+
 func ValidateUserSignupReq(req *UserSignupReq) error {
-	if req.Email == "" || req.Password == "" || req.ConfirmPassword == "" {
+	if strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" || strings.TrimSpace(req.ConfirmPassword) == "" {
 		return InvalidReqBodyErr
 	}
 	return nil
 }
 
 func ValidateUserLoginReq(req *UserLoginReq) error {
-	if req.Email == "" || req.Password == "" {
+	if strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" {
+		return InvalidReqBodyErr
+	}
+	return nil
+}
+
+func ValidateUserSmsLoginSendReq(req *UserSmsLoginSendReq) error {
+	if strings.TrimSpace(req.PhoneNumber) == "" {
+		return InvalidReqBodyErr
+	}
+	return nil
+}
+
+func ValidateUserSmsLoginReq(req *UserSmsLoginReq) error {
+	if strings.TrimSpace(req.VerifyCode) == "" || strings.TrimSpace(req.PhoneNumber) == "" {
 		return InvalidReqBodyErr
 	}
 	return nil
