@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"ibook/internal/service/message/sms"
 	"ibook/pkg/utils/randcode"
 )
 
@@ -29,18 +30,26 @@ type UserCache interface {
 	SetUserById(ctx *gin.Context, user *User) error
 }
 
-type UserService struct {
+type UserService interface {
+	SignUp(ctx *gin.Context, email string, password string, confirmPassword string) (*User, error)
+	Login(ctx *gin.Context, email string, password string) (*User, error)
+	Profile(ctx *gin.Context, userId int64) (*User, error)
+	SendLoginVerifyCode(ctx *gin.Context, phoneNumber string) error
+	LoginSMS(context *gin.Context, phoneNumber string, code string) (*User, error)
+}
+
+type userService struct {
 	ur   UserRepo
-	smsr SMSRepo
-	uc   UserCache
+	smsr sms.SMSRepo
 	vcr  VerifyCodeRepo
+	uc   UserCache
 }
 
-func NewUserService(ur UserRepo, uc UserCache, smsr SMSRepo, vcr VerifyCodeRepo) *UserService {
-	return &UserService{ur: ur, uc: uc, smsr: smsr, vcr: vcr}
+func NewUserService(ur UserRepo, uc UserCache, smsr sms.SMSRepo, vcr VerifyCodeRepo) UserService {
+	return &userService{ur: ur, uc: uc, smsr: smsr, vcr: vcr}
 }
 
-func (s *UserService) SignUp(ctx *gin.Context, email string, password string, confirmPassword string) (*User, error) {
+func (s *userService) SignUp(ctx *gin.Context, email string, password string, confirmPassword string) (*User, error) {
 	if password != confirmPassword {
 		return nil, PasswordNotEqualErr
 	}
@@ -61,7 +70,7 @@ func (s *UserService) SignUp(ctx *gin.Context, email string, password string, co
 	return user, nil
 }
 
-func (s *UserService) Login(ctx *gin.Context, email string, password string) (*User, error) {
+func (s *userService) Login(ctx *gin.Context, email string, password string) (*User, error) {
 	user, err := s.ur.FindUserByEmail(email)
 	if err != nil && errors.Is(err, UserNotExistsErr) {
 		return nil, UserNotExistsErr
@@ -72,7 +81,7 @@ func (s *UserService) Login(ctx *gin.Context, email string, password string) (*U
 	return user, nil
 }
 
-func (s *UserService) Profile(ctx *gin.Context, userId int64) (*User, error) {
+func (s *userService) Profile(ctx *gin.Context, userId int64) (*User, error) {
 	userCache, err := s.uc.GetUserById(ctx, userId)
 	if err == nil {
 		userCache.PassWord = ""
@@ -99,7 +108,7 @@ func (s *UserService) Profile(ctx *gin.Context, userId int64) (*User, error) {
 	return user, nil
 }
 
-func (s *UserService) SendLoginVerifyCode(ctx *gin.Context, phoneNumber string) error {
+func (s *userService) SendLoginVerifyCode(ctx *gin.Context, phoneNumber string) error {
 	code := randcode.GenVerifyCode(6, randcode.TYPE_MIXED)
 	phoneNumbers := []string{phoneNumber}
 	// 尝试将 code 置入缓存中
@@ -111,10 +120,10 @@ func (s *UserService) SendLoginVerifyCode(ctx *gin.Context, phoneNumber string) 
 		// 3. 其他未知错误
 		return err
 	}
-	return s.smsr.SendMessage(ctx, "verify_code_tlpId", phoneNumbers, []MsgArgs{{Name: "code", Value: code}})
+	return s.smsr.SendMessage(ctx, "verify_code_tlpId", phoneNumbers, []sms.MsgArgs{{Name: "code", Value: code}})
 }
 
-func (s *UserService) LoginSMS(context *gin.Context, phoneNumber string, code string) (*User, error) {
+func (s *userService) LoginSMS(context *gin.Context, phoneNumber string, code string) (*User, error) {
 	// 1. 校验验证码是否正确
 	key := fmt.Sprintf("verify_code:%s:%s", "login", phoneNumber)
 	ok, err := s.vcr.CheckVerifyCode(context, key, code)

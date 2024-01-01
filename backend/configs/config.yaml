@@ -10,3 +10,17 @@ secret:
   jwt:
     key: "bswaterb12345678"
     life_duration_time: 43200
+sms:
+  login:
+    aliyun:
+      sign_name: "bswaterb"
+      tlp_code: "example"
+      access_key_id: "123456"
+      access_key_secret: "123456"
+    tencent:
+      sign_name: "bswaterb"
+      tlp_code: "example"
+      app_id: "123456"
+      secret_id: "123456"
+      secret_key: "123456"
+

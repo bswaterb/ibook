@@ -1,4 +1,4 @@
-package service
+package sms
 
 import (
 	"errors"
@@ -12,14 +12,6 @@ var (
 
 type SMSRepo interface {
 	SendMessage(ctx *gin.Context, tplId string, phoneNumbers []string, args []MsgArgs) error
-}
-
-type SMSService struct {
-	smsRepo SMSRepo
-}
-
-func NewSMSService(smsRepo SMSRepo) *SMSService {
-	return &SMSService{smsRepo: smsRepo}
 }
 
 type MsgArgs struct {

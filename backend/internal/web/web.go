@@ -14,7 +14,7 @@ var (
 )
 
 type UserSignupReq struct {
-	Email           string `json:"email"`
+	Email           string `json:"email" binding:"required"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
 }

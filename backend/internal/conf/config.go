@@ -15,6 +15,7 @@ type Config struct {
 	ServerConf *Server `yaml:"server"`
 	DataConf   *Data   `yaml:"data"`
 	SecretConf *Secret `yaml:"secret"`
+	Sms        *SMS    `yaml:"sms"`
 }
 
 type Server struct {
@@ -42,6 +43,30 @@ type Secret struct {
 type Jwt struct {
 	Key              string `yaml:"key"`
 	LifeDurationTime int64  `yaml:"life_duration_time"`
+}
+
+type SMS struct {
+	Login *SMSLogin `yaml:"login"`
+}
+
+type SMSLogin struct {
+	Aliyun     *AliyunSMS     `yaml:"aliyun"`
+	Tencentyun *TencentyunSMS `yaml:"tencentyun"`
+}
+
+type AliyunSMS struct {
+	SignName        string `yaml:"sign_name"`
+	TplCode         string `yaml:"tpl_code"`
+	AccessKeyId     string `yaml:"access_key_id"`
+	AccessKeySecret string `yaml:"access_key_secret"`
+}
+
+type TencentyunSMS struct {
+	SignName  string `yaml:"sign_name"`
+	TplCode   string `yaml:"tpl_code"`
+	AppId     string `yaml:"app_id"`
+	SecretId  string `yaml:"secret_id"`
+	SecretKey string `yaml:"secret_key"`
 }
 
 func GetConf(flags ...int) *Config {
