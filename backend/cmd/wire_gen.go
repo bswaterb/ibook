@@ -13,7 +13,12 @@ import (
 	ratelimit2 "ibook/internal/data/message/sms/ratelimit"
 	"ibook/internal/service"
 	"ibook/internal/web"
+	"ibook/pkg/utils/logger"
 	"ibook/pkg/utils/ratelimit"
+)
+
+import (
+	_ "github.com/spf13/viper/remote"
 )
 
 // Injectors from wire.go:
@@ -30,7 +35,8 @@ func wireApp(secret *conf.Secret, mySQL *conf.MySQL, redis *conf.Redis, server *
 	verifyCodeRepo := data.NewVerifyCodeRepo(cmdable)
 	userService := service.NewUserService(userRepo, userCache, smsRepo, verifyCodeRepo)
 	userHandler := web.NewUserHandler(userService)
-	v := newMiddleware(secret, cmdable)
+	loggerLogger := logger.NewZapLogger()
+	v := newMiddleware(secret, loggerLogger, cmdable)
 	engine := newApp(userHandler, v)
 	return engine, func() {
 		cleanup()

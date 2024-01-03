@@ -12,14 +12,16 @@ import (
 	"ibook/internal/conf"
 	"ibook/internal/web"
 	"ibook/pkg/middlewares/jwtauth"
+	logger2 "ibook/pkg/middlewares/logger"
 	"ibook/pkg/middlewares/ratelimit"
+	"ibook/pkg/utils/logger"
 	"strings"
 	"time"
 )
 
 func main() {
 	config := conf.GetConf()
-	initRemoteViper()
+	// initRemoteViper()
 	fmt.Println(viper.Get("server.port"))
 	server, cleanup, err := wireApp(config.SecretConf, config.DataConf.MysqlConf, config.DataConf.RedisConf, config.ServerConf)
 	if err != nil {
@@ -39,7 +41,7 @@ func newApp(userHandler *web.UserHandler, middlewares []gin.HandlerFunc) *gin.En
 	return sever
 }
 
-func newMiddleware(secret *conf.Secret, redisCli redis.Cmdable) []gin.HandlerFunc {
+func newMiddleware(secret *conf.Secret, logger logger.Logger, redisCli redis.Cmdable) []gin.HandlerFunc {
 	corsMw := cors.New(cors.Config{
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"x-jwt-token"},
@@ -52,15 +54,16 @@ func newMiddleware(secret *conf.Secret, redisCli redis.Cmdable) []gin.HandlerFun
 		},
 		MaxAge: 12 * time.Hour,
 	})
+	loggerMw := logger2.NewBuilder(logger).AllowReqBody().AllowRespBody().Build()
 	rlMw := ratelimit.NewBuilder(redisCli, time.Second, 100).Build()
 	jwtauth.SetEncryptEnv(secret.JwtConf.Key, secret.JwtConf.LifeDurationTime)
 	jwtMw := jwtauth.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
-		IgnorePaths("/login_sms/send").
-		IgnorePaths("/login_sms").
+		IgnorePaths("/users/login_sms/send").
+		IgnorePaths("/users/login_sms").
 		IgnorePaths("/users/login").
 		Build()
-	return []gin.HandlerFunc{corsMw, rlMw, jwtMw}
+	return []gin.HandlerFunc{corsMw, loggerMw, rlMw, jwtMw}
 }
 
 func initViper() {
@@ -90,4 +93,8 @@ func initRemoteViper() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func initLogger() {
+
 }
