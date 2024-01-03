@@ -16,3 +16,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: qq781201407
       MYSQL_DATABASE: ibook
+  etcd:
+    container_name: ibookEtcd
+    image: bitnami/etcd
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    ports:
+      - 12379:2379

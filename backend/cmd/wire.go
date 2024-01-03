@@ -12,9 +12,10 @@ import (
 	"ibook/internal/data"
 	"ibook/internal/service"
 	"ibook/internal/web"
+	"ibook/pkg"
 )
 
 // wireApp init gin application.
 func wireApp(*conf.Secret, *conf.MySQL, *conf.Redis, *conf.Server) (*gin.Engine, func(), error) {
-	panic(wire.Build(data.DataProviderSet, web.WebProviderSet, service.ServiceProviderSet, newMiddleware, newApp))
+	panic(wire.Build(data.DataProviderSet, web.WebProviderSet, service.ServiceProviderSet, pkg.PkgProviderSet, newMiddleware, newApp))
 }

@@ -7,13 +7,13 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"ibook/internal/conf"
-	"ibook/internal/data/message/sms/mem"
+	"ibook/internal/data/message/sms/ratelimit"
 	"log"
 )
 
 // DataProviderSet is data providers.
 var DataProviderSet = wire.NewSet(NewData,
-	NewUserRepo, NewVerifyCodeRepo, NewUserCache, NewMDB, NewRDB, mem.NewMemSMSRepo)
+	NewUserRepo, NewVerifyCodeRepo, NewUserCache, NewMDB, NewRDB, ratelimit.NewRateLimitSmsRepo)
 
 type Data struct {
 	rdb redis.Cmdable

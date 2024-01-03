@@ -1,9 +1,14 @@
 package main
 
 import (
+	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 	"ibook/internal/conf"
 	"ibook/internal/web"
 	"ibook/pkg/middlewares/jwtauth"
@@ -14,6 +19,8 @@ import (
 
 func main() {
 	config := conf.GetConf()
+	initRemoteViper()
+	fmt.Println(viper.Get("server.port"))
 	server, cleanup, err := wireApp(config.SecretConf, config.DataConf.MysqlConf, config.DataConf.RedisConf, config.ServerConf)
 	if err != nil {
 		panic(err)
@@ -54,4 +61,33 @@ func newMiddleware(secret *conf.Secret, redisCli redis.Cmdable) []gin.HandlerFun
 		IgnorePaths("/users/login").
 		Build()
 	return []gin.HandlerFunc{corsMw, rlMw, jwtMw}
+}
+
+func initViper() {
+	filePath := pflag.String("config", "./configs/config.yaml", "配置文件路径")
+	pflag.Parse()
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(*filePath)
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func initRemoteViper() {
+	viper.SetConfigType("yaml")
+	err := viper.AddRemoteProvider("etcd3", "127.0.0.1:12379", "/ibook")
+	if err != nil {
+		panic(err)
+	}
+	if err = viper.WatchRemoteConfig(); err != nil {
+		panic(err)
+	}
+	viper.OnConfigChange(func(in fsnotify.Event) {
+
+	})
+	err = viper.ReadRemoteConfig()
+	if err != nil {
+		panic(err)
+	}
 }

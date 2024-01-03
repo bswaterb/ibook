@@ -3,6 +3,7 @@ package ratelimit
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"ibook/internal/data/message/sms/mem"
 	"ibook/internal/service/message/sms"
 	"ibook/pkg/utils/ratelimit"
 )
@@ -12,9 +13,9 @@ type rateLimitSmsRepo struct {
 	limiter ratelimit.Limiter
 }
 
-func NewRateLimitSmsRepo(originalRepo sms.SMSRepo, limiter ratelimit.Limiter) sms.SMSRepo {
+func NewRateLimitSmsRepo(limiter ratelimit.Limiter) sms.SMSRepo {
 	return &rateLimitSmsRepo{
-		repo:    originalRepo,
+		repo:    mem.NewMemSMSRepo(),
 		limiter: limiter,
 	}
 }
@@ -26,8 +27,10 @@ func (r *rateLimitSmsRepo) SendMessage(ctx *gin.Context, tplId string, phoneNumb
 		return fmt.Errorf("短信限流模块出现问题，%w", err)
 	}
 	if limited {
+		// 转异步消费
 		return fmt.Errorf("短信发送服务当前处于限流状态，拒绝发送至: %s", phoneNumbers[0])
 	}
+
 	err = r.repo.SendMessage(ctx, tplId, phoneNumbers, args)
 	return err
 }
