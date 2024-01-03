@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"ibook/internal/service/message/sms"
 	"ibook/pkg/utils/randcode"
 )
@@ -57,9 +58,13 @@ func (s *userService) SignUp(ctx *gin.Context, email string, password string, co
 	if err == nil || !errors.Is(err, UserNotExistsErr) {
 		return nil, UserAlreadyExistsErr
 	}
+	cryptPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
 	user := &User{
 		Email:    email,
-		PassWord: password,
+		PassWord: string(cryptPassword),
 	}
 	if err := s.ur.CreateUser(user); err != nil {
 		if errors.Is(err, UserAlreadyExistsErr) {
@@ -75,7 +80,8 @@ func (s *userService) Login(ctx *gin.Context, email string, password string) (*U
 	if err != nil && errors.Is(err, UserNotExistsErr) {
 		return nil, UserNotExistsErr
 	}
-	if user.PassWord != password {
+
+	if bcrypt.CompareHashAndPassword([]byte(user.PassWord), []byte(password)) != nil {
 		return nil, PasswordNotRightErr
 	}
 	return user, nil
