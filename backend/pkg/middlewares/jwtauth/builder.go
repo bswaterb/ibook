@@ -16,7 +16,7 @@ var (
 
 type myClaims struct {
 	jwt.RegisteredClaims
-	userId int64
+	UserId int64 `json:"userId"`
 }
 
 func GenerateToken(userId int64) string {
@@ -27,7 +27,7 @@ func GenerateToken(userId int64) string {
 			ExpiresAt: jwt.NewNumericDate(lifeTime),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
-		userId: userId,
+		UserId: userId,
 	})
 	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
@@ -94,10 +94,10 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		now := time.Now().UTC()
 		// 每十秒钟刷新一次
 		if claims.IssuedAt.Sub(now) < -time.Second*10 {
-			newToken := GenerateToken(claims.userId)
+			newToken := GenerateToken(claims.UserId)
 			ctx.Header("x-jwt-token", newToken)
 		}
-		ctx.Set("userId", claims.userId)
+		ctx.Set("userId", claims.UserId)
 	}
 }
 

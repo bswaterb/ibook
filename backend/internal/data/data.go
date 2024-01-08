@@ -13,7 +13,7 @@ import (
 
 // DataProviderSet is data providers.
 var DataProviderSet = wire.NewSet(NewData,
-	NewUserRepo, NewVerifyCodeRepo, NewUserCache, NewMDB, NewRDB, ratelimit.NewRateLimitSmsRepo)
+	NewUserRepo, NewVerifyCodeRepo, NewArticleReaderRepo, NewArticleAuthorRepo, NewArticleSyncRepo, NewUserCache, NewMDB, NewRDB, ratelimit.NewRateLimitSmsRepo)
 
 type Data struct {
 	rdb redis.Cmdable
@@ -56,5 +56,5 @@ func NewRDB(rConf *conf.Redis) redis.Cmdable {
 }
 
 func initTable(db *gorm.DB) error {
-	return db.AutoMigrate(&User{})
+	return db.AutoMigrate(&User{}, &ArticleAuthor{}, &ArticleReader{})
 }

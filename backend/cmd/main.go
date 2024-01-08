@@ -33,11 +33,12 @@ func main() {
 	}
 }
 
-func newApp(userHandler *web.UserHandler, middlewares []gin.HandlerFunc) *gin.Engine {
+func newApp(userHandler *web.UserHandler, articleHandlers *web.ArticleHandler, middlewares []gin.HandlerFunc) *gin.Engine {
 	sever := gin.Default()
 	sever.Use(middlewares...)
 	// 注册 /users/*** 路由
 	userHandler.RegisterRoutesV1(sever)
+	articleHandlers.RegisterRoutesV1(sever)
 	return sever
 }
 
