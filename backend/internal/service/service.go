@@ -20,10 +20,20 @@ type ArticleReader struct {
 	Article
 }
 
+type ArticleStatus uint8
+
+const (
+	ArticleStatusUnknown = iota
+	ArticleStatusUnpublished
+	ArticleStatusPublished
+	ArticleStatusPrivate
+)
+
 type Article struct {
 	Id      int64
 	Title   string
 	Content string
+	Status  ArticleStatus
 	Author  Author
 }
 

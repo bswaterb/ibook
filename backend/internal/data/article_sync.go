@@ -14,12 +14,14 @@ type Article struct {
 	AuthorId    int64  `gorm:"index=aid_ctime"`
 	CreatedTime int64  `gorm:"index=aid_ctime"`
 	UpdatedTime int64
+	Status      uint8
 }
 
 type articleSyncRepo struct {
 	data *Data
 }
 
+// Sync 同步发表文章，文章 status 都应为 published
 func (repo *articleSyncRepo) Sync(ctx *gin.Context, articleA *service.ArticleAuthor, articleR *service.ArticleReader) error {
 	err := repo.data.mdb.Transaction(func(tx *gorm.DB) error {
 		// flag > 0 -> 更新 || flag <= 0 -> 创建
@@ -42,8 +44,27 @@ func (repo *articleSyncRepo) Sync(ctx *gin.Context, articleA *service.ArticleAut
 				return fmt.Errorf("同步发表过程出错：创建作者文章失败")
 			}
 		}
+		articleR.Id = articleA.Id
 		readerRepo := NewArticleReaderRepo(repo.data)
 		return readerRepo.UpsertArticle(ctx, articleR)
+	})
+	return err
+}
+
+func (repo *articleSyncRepo) SyncUpdateStatus(ctx *gin.Context, articleId int64, authorId int64, status uint8) error {
+	err := repo.data.mdb.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		mdbData := &Data{mdb: tx}
+		authorRepo := NewArticleAuthorRepo(mdbData)
+		readerRepo := NewArticleReaderRepo(mdbData)
+		err := authorRepo.UpdateStatusById(ctx, articleId, authorId, status)
+		if err != nil {
+			return fmt.Errorf("同步更新文章状态时出错 - article_author: %w", err)
+		}
+		err = readerRepo.UpdateStatusById(ctx, articleId, authorId, status)
+		if err != nil {
+			return fmt.Errorf("同步更新文章状态时出错 - article_reader: %w", err)
+		}
+		return nil
 	})
 	return err
 }

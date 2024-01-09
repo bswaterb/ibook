@@ -24,6 +24,15 @@ type ArticlePublishReply struct {
 	OK bool  `json:"ok"`
 }
 
+type ArticleWithdrawReq struct {
+	Id int64 `json:"id"`
+}
+
+type ArticleWithdrawReply struct {
+	Id int64 `json:"id"`
+	OK bool  `json:"ok"`
+}
+
 func (req ArticleEditReq) validate() bool {
 	return true
 }

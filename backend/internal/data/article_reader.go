@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm/clause"
 	"ibook/internal/service"
@@ -15,43 +16,6 @@ type articleReaderRepo struct {
 	db *Data
 }
 
-func (repo *articleReaderRepo) CreateArticle(ctx *gin.Context, article *service.ArticleReader) (bool, error) {
-	now := time.Now().UTC().UnixMilli()
-	newArticle := &ArticleAuthor{
-		Article{
-			Title:       article.Title,
-			Content:     article.Content,
-			AuthorId:    article.Author.Id,
-			CreatedTime: now,
-			UpdatedTime: now,
-		},
-	}
-	res := repo.db.mdb.Create(newArticle)
-	if err := res.Error; err != nil {
-		return false, err
-	}
-	article.Id = newArticle.Id
-	return true, nil
-}
-
-func (repo *articleReaderRepo) UpdateArticle(ctx *gin.Context, article *service.ArticleReader) (bool, error) {
-	now := time.Now().UTC().UnixMilli()
-	newArticle := &ArticleReader{
-		Article{
-			Id:          article.Id,
-			Title:       article.Title,
-			Content:     article.Content,
-			UpdatedTime: now,
-		},
-	}
-	// 不更新 author_id 以及 created_time 字段
-	res := repo.db.mdb.Model(newArticle).Omit("created_time", "author_id").Save(newArticle)
-	if err := res.Error; err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func (repo *articleReaderRepo) UpsertArticle(ctx *gin.Context, article *service.ArticleReader) error {
 	now := time.Now().UnixMilli()
 	newArticle := &ArticleReader{
@@ -62,6 +26,7 @@ func (repo *articleReaderRepo) UpsertArticle(ctx *gin.Context, article *service.
 			AuthorId:    article.Author.Id,
 			CreatedTime: now,
 			UpdatedTime: now,
+			Status:      uint8(article.Status),
 		},
 	}
 	err := repo.db.mdb.Clauses(clause.OnConflict{
@@ -69,9 +34,26 @@ func (repo *articleReaderRepo) UpsertArticle(ctx *gin.Context, article *service.
 			"title":        newArticle.Title,
 			"content":      newArticle.Content,
 			"updated_time": now,
+			"status":       newArticle.Status,
 		}),
 	}).Create(newArticle).Error
 	return err
+}
+
+func (repo *articleReaderRepo) UpdateStatusById(ctx *gin.Context, articleId int64, authorId int64, status uint8) error {
+	res := repo.db.mdb.WithContext(ctx).Model(&ArticleReader{}).
+		Where("id=? and author_id=?", articleId, authorId).
+		Updates(map[string]any{
+			"status": status,
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		return fmt.Errorf("文章已隐藏或作者不对应")
+	}
+	return nil
 }
 
 func NewArticleReaderRepo(db *Data) service.ArticleReaderRepo {
