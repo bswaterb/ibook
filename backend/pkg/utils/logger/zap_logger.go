@@ -1,6 +1,8 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+)
 
 type zapLogger struct {
 	logger *zap.Logger
@@ -28,6 +30,11 @@ func (z *zapLogger) Warn(msg string, args ...Field) {
 
 func (z *zapLogger) Error(msg string, args ...Field) {
 	z.logger.Error(msg, toZapFields(args)...)
+}
+
+func (z *zapLogger) With(args ...Field) Logger {
+	l := z.logger.With(toZapFields(args)...)
+	return &zapLogger{logger: l}
 }
 
 func toZapFields(args []Field) []zap.Field {

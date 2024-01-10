@@ -56,5 +56,5 @@ func NewRDB(rConf *conf.Redis) redis.Cmdable {
 }
 
 func initTable(db *gorm.DB) error {
-	return db.AutoMigrate(&User{}, &ArticleAuthor{}, &ArticleReader{})
+	return db.AutoMigrate(&User{}, ArticleAuthor{}, ArticleReader{})
 }

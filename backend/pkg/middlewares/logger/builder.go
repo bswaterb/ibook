@@ -44,7 +44,12 @@ func (b *MiddlewareBuilder) Build() gin.HandlerFunc {
 			Url: url,
 		}
 		reqId := uuid.NewString()
-		b.logger.Info(reqId+"[请求入参]:", []logger.Field{{"Method", al.Method}, {"URL", al.Url}}...)
+		specLogger := b.logger.With(logger.Field{
+			Key:   "request-uuid",
+			Value: reqId,
+		})
+		ctx.Set("ctx-logger", specLogger)
+		specLogger.Info("[请求入参]:", []logger.Field{{"Method", al.Method}, {"URL", al.Url}}...)
 		if b.allowReqBody && ctx.Request.Body != nil {
 			// Body 读完就没有了
 			body, _ := ctx.GetRawData()
@@ -65,7 +70,7 @@ func (b *MiddlewareBuilder) Build() gin.HandlerFunc {
 
 		defer func() {
 			al.Duration = time.Since(start).String()
-			b.logger.Info(reqId+"[请求出参]:", transferLogStructToString(al)...)
+			specLogger.Info("[请求出参]:", transferLogStructToString(al)...)
 		}()
 		// 执行业务逻辑
 		ctx.Next()

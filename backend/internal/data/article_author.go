@@ -81,6 +81,25 @@ func (repo *articleAuthorRepo) UpdateStatusById(ctx *gin.Context, articleId int6
 	return nil
 }
 
+func (repo *articleAuthorRepo) GetArticleById(ctx *gin.Context, id int64, userId int64) (*service.Article, error) {
+	article := &Article{}
+	res := repo.db.mdb.WithContext(ctx).Model(&ArticleAuthor{}).
+		Where("id=? and author_id=?", id, userId).First(article)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, fmt.Errorf("查询无果，文章不存在或用户不匹配")
+	}
+	return &service.Article{
+		Id:      article.Id,
+		Title:   article.Title,
+		Content: article.Content,
+		Status:  service.ArticleStatus(article.Status),
+		Author:  service.Author{Id: article.AuthorId},
+	}, nil
+}
+
 func NewArticleAuthorRepo(db *Data) service.ArticleAuthorRepo {
 	return &articleAuthorRepo{db: db}
 }

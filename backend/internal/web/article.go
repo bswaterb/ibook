@@ -3,11 +3,16 @@ package web
 import (
 	"github.com/gin-gonic/gin"
 	"ibook/internal/service"
+	"ibook/pkg/utils/bskit/slice"
 	"ibook/pkg/utils/logger"
 	"ibook/pkg/utils/request"
 	"ibook/pkg/utils/result"
+	"strconv"
 	"strings"
+	"time"
 )
+
+const handlerName = "ArticleHandler"
 
 type ArticleHandler struct {
 	svc    service.ArticleService
@@ -27,6 +32,9 @@ func (handler *ArticleHandler) RegisterRoutesV1(server *gin.Engine) {
 	ug.POST("/edit", handler.Edit)
 	ug.POST("/publish", handler.Publish)
 	ug.POST("/withdraw", handler.Withdraw)
+	ug.GET("/pub/list", handler.PubList)
+	ug.GET("/pub/detail/:id", handler.PubDetail)
+	ug.GET("/detail/:id", handler.Detail)
 }
 
 func (handler *ArticleHandler) Edit(ctx *gin.Context) {
@@ -133,4 +141,78 @@ func (handler *ArticleHandler) Withdraw(ctx *gin.Context) {
 		OK: true,
 	})
 
+}
+
+func (handler *ArticleHandler) PubList(ctx *gin.Context) {
+	l := logger.TagCtxLogger(ctx, handler.logger, "ArticleHandler-List")
+	req := &ArticleListReq{}
+	if err := request.ParseRequestBody(ctx, req); err != nil {
+		result.RespWithError(ctx, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	userId, exists := ctx.Get("userId")
+	if !exists || userId.(int64) < 0 {
+		l.Error("未成功从 token 提取 userId", logger.Field{
+			Key:   "token错误",
+			Value: nil,
+		})
+		result.RespWithError(ctx, result.UNKNOWN_ERROR_CODE, "用户未登录", nil)
+	}
+	articles, err := handler.svc.ListPubArticles(ctx, userId.(int64), req.Offset, req.Limit)
+	if err != nil {
+		l.Warn("获取文章列表失败", logger.Field{
+			Key:   "错误详情",
+			Value: err,
+		})
+	}
+	result.RespWithSuccess(ctx, "获取成功", slice.Map[*service.Article, *Article](articles, func(idx int, src *service.Article) *Article {
+		return &Article{
+			Id:          src.Id,
+			Title:       src.Title,
+			Abstract:    src.GenAbstract(),
+			Status:      uint8(src.Status),
+			AuthorId:    src.Author.Id,
+			AuthorName:  src.Author.Name,
+			UpdatedTime: time.Unix(src.UpdatedTime, 0).Local().Format(time.DateTime),
+			CreatedTime: time.Unix(src.CreatedTime, 0).Local().Format(time.DateTime),
+		}
+	}))
+}
+
+func (handler *ArticleHandler) PubDetail(context *gin.Context) {
+
+}
+
+func (handler *ArticleHandler) Detail(context *gin.Context) {
+	l := logger.TagCtxLogger(context, handler.logger, "ArticleHandler-Detail")
+	id := context.Param("id")
+	articleId, err := strconv.ParseInt(id, 10, 64)
+	if err == nil {
+		result.RespWithError(context, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	userId, exists := context.Get("userId")
+	if !exists || userId.(int64) < 0 {
+		l.Error("未成功从 token 提取 userId", logger.Field{
+			Key:   "token错误",
+			Value: nil,
+		})
+		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "用户未登录", nil)
+	}
+
+	// 去制作库中获取数据
+	article, err := handler.svc.GetArticleDetail(context, articleId, userId.(int64))
+	if err != nil {
+		l.Warn("数据库获取数据失败", logger.Field{
+			Key:   "错误详情",
+			Value: err,
+		})
+		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "文章获取失败", nil)
+		return
+	}
+	result.RespWithSuccess(context, "获取成功", &GetArticleReply{
+		Id:      article.Id,
+		Title:   article.Title,
+		Content: article.Content,
+	})
 }

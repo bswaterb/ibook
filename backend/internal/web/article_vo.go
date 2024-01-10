@@ -33,6 +33,33 @@ type ArticleWithdrawReply struct {
 	OK bool  `json:"ok"`
 }
 
+type ArticleListReq struct {
+	Offset int64 `json:"offset"`
+	Limit  int64 `json:"limit"`
+}
+
+type ArticleListReply struct {
+	Articles []Article `json:"articles"`
+}
+
+type GetArticleReply struct {
+	Id      int64  `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type Article struct {
+	Id       int64  `json:"id"`
+	Title    string `json:"title"`
+	Abstract string `json:"abstract"`
+	// Content string `json:"content"`
+	Status      uint8  `json:"status"`
+	AuthorId    int64  `json:"authorId"`
+	AuthorName  string `json:"authorName"`
+	CreatedTime string `json:"createdTime"`
+	UpdatedTime string `json:"updatedTime"`
+}
+
 func (req ArticleEditReq) validate() bool {
 	return true
 }

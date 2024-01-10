@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"ibook/internal/service"
+	"strings"
 	"time"
 )
 
@@ -16,6 +18,7 @@ type User struct {
 	Id          int64          `gorm:"primaryKey,autoIncrement"`
 	Email       sql.NullString `gorm:"unique"`
 	PhoneNumber sql.NullString `gorm:"unique"`
+	NickName    string         `gorm:"unique"`
 	Password    string
 	CreatedTime int64
 	UpdatedTime int64
@@ -31,15 +34,19 @@ func NewUserRepo(db *Data) service.UserRepo {
 
 func (ur *userRepo) CreateUser(user *service.User) error {
 	now := time.Now().UTC().UnixMilli()
+	if strings.TrimSpace(user.NickName) == "" {
+		user.NickName = "匿名用户" + uuid.NewString()
+	}
 	u := &User{
 		Email: sql.NullString{
 			String: user.Email,
-			Valid:  user.Email != "",
+			Valid:  strings.TrimSpace(user.Email) != "",
 		},
 		PhoneNumber: sql.NullString{
 			String: user.PhoneNumber,
-			Valid:  user.PhoneNumber != "",
+			Valid:  strings.TrimSpace(user.PhoneNumber) != "",
 		},
+		NickName:    user.NickName,
 		Password:    user.PassWord,
 		CreatedTime: now,
 		UpdatedTime: now,
@@ -68,6 +75,7 @@ func (ur *userRepo) FindUserByEmail(email string) (*service.User, error) {
 		Email:       u.Email.String,
 		PhoneNumber: u.PhoneNumber.String,
 		PassWord:    u.Password,
+		NickName:    u.NickName,
 	}, nil
 }
 
@@ -85,6 +93,7 @@ func (ur *userRepo) FindUserById(userId int64) (*service.User, error) {
 		Email:       u.Email.String,
 		PhoneNumber: u.PhoneNumber.String,
 		PassWord:    u.Password,
+		NickName:    u.NickName,
 	}, nil
 }
 
@@ -102,6 +111,7 @@ func (ur *userRepo) FindUserByPhone(number string) (*service.User, error) {
 		Email:       u.Email.String,
 		PhoneNumber: u.PhoneNumber.String,
 		PassWord:    u.Password,
+		NickName:    u.NickName,
 	}, nil
 }
 

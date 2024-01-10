@@ -32,8 +32,8 @@ type UserCache interface {
 }
 
 type UserService interface {
-	SignUp(ctx *gin.Context, email string, password string, confirmPassword string) (*User, error)
-	Login(ctx *gin.Context, email string, password string) (*User, error)
+	SignUp(ctx *gin.Context, email string, nickName string, password string, confirmPassword string) (*User, error)
+	Login(ctx *gin.Context, phone string, email string, password string) (*User, error)
 	Profile(ctx *gin.Context, userId int64) (*User, error)
 	SendLoginVerifyCode(ctx *gin.Context, phoneNumber string) error
 	LoginSMS(context *gin.Context, phoneNumber string, code string) (*User, error)
@@ -50,7 +50,7 @@ func NewUserService(ur UserRepo, uc UserCache, smsr sms.SMSRepo, vcr VerifyCodeR
 	return &userService{ur: ur, uc: uc, smsr: smsr, vcr: vcr}
 }
 
-func (s *userService) SignUp(ctx *gin.Context, email string, password string, confirmPassword string) (*User, error) {
+func (s *userService) SignUp(ctx *gin.Context, email string, nickName string, password string, confirmPassword string) (*User, error) {
 	if password != confirmPassword {
 		return nil, PasswordNotEqualErr
 	}
@@ -64,6 +64,7 @@ func (s *userService) SignUp(ctx *gin.Context, email string, password string, co
 	}
 	user := &User{
 		Email:    email,
+		NickName: nickName,
 		PassWord: string(cryptPassword),
 	}
 	if err := s.ur.CreateUser(user); err != nil {
@@ -75,12 +76,23 @@ func (s *userService) SignUp(ctx *gin.Context, email string, password string, co
 	return user, nil
 }
 
-func (s *userService) Login(ctx *gin.Context, email string, password string) (*User, error) {
-	user, err := s.ur.FindUserByEmail(email)
-	if err != nil && errors.Is(err, UserNotExistsErr) {
+func (s *userService) Login(ctx *gin.Context, phone string, email string, password string) (*User, error) {
+	var user *User
+	var err error
+	if email != "" {
+		user, err = s.ur.FindUserByEmail(email)
+		if err != nil && errors.Is(err, UserNotExistsErr) {
+			return nil, UserNotExistsErr
+		}
+	} else if phone != "" {
+		user, err = s.ur.FindUserByPhone(phone)
+		if err != nil && errors.Is(err, UserNotExistsErr) {
+			return nil, UserNotExistsErr
+		}
+	}
+	if user == nil {
 		return nil, UserNotExistsErr
 	}
-
 	if bcrypt.CompareHashAndPassword([]byte(user.PassWord), []byte(password)) != nil {
 		return nil, PasswordNotRightErr
 	}

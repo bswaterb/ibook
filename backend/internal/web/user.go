@@ -23,7 +23,7 @@ type UserHandler struct {
 
 func NewUserHandler(svc service.UserService) *UserHandler {
 	const (
-		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
+		emailRegexPattern    = "^[A-Za-z0-9]+([_\\.][A-Za-z0-9]+)*@([A-Za-z0-9\\-]+\\.)+[A-Za-z]{2,6}$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 		phoneRegexPattern    = `^1[3456789]\d{9}$`
 	)
@@ -64,7 +64,7 @@ func (u *UserHandler) SignUp(context *gin.Context) {
 		result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "邮箱或密码格式错误", nil)
 		return
 	}
-	user, err := u.svc.SignUp(context, req.Email, req.Password, req.ConfirmPassword)
+	user, err := u.svc.SignUp(context, req.Email, req.NickName, req.Password, req.ConfirmPassword)
 	if err != nil {
 		if errors.Is(err, service.UserAlreadyExistsErr) {
 			result.RespWithError(context, result.RECORD_ALREADY_EXISTS_CODE, "此邮箱已被注册", nil)
@@ -78,9 +78,10 @@ func (u *UserHandler) SignUp(context *gin.Context) {
 		return
 	}
 	result.RespWithSuccess(context, "注册成功", &UserSignupResp{
-		UserId: user.Id,
-		Email:  user.Email,
-		Token:  jwtauth.GenerateToken(user.Id),
+		UserId:   user.Id,
+		Email:    user.Email,
+		NickName: user.NickName,
+		Token:    jwtauth.GenerateToken(user.Id),
 	})
 }
 
@@ -90,15 +91,27 @@ func (u *UserHandler) Login(context *gin.Context) {
 		result.RespWithError(context, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
 		return
 	}
-	if ok, _ := u.emailExp.MatchString(req.Email); !ok {
-		result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "邮箱或密码格式错误", nil)
+	if email := strings.TrimSpace(req.Email); email != "" {
+		req.Email = email
+		if ok, _ := u.emailExp.MatchString(req.Email); !ok {
+			result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "邮箱或密码格式错误", nil)
+			return
+		}
+	} else if phoneNumber := strings.TrimSpace(req.PhoneNumber); phoneNumber != "" {
+		req.PhoneNumber = phoneNumber
+		if ok, _ := u.phoneExp.MatchString(req.PhoneNumber); !ok {
+			result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "手机号码或密码格式错误", nil)
+			return
+		}
+	} else {
+		result.RespWithError(context, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
 		return
 	}
 	if ok, _ := u.passwordExp.MatchString(req.Password); !ok {
-		result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "邮箱或密码格式错误", nil)
+		result.RespWithError(context, result.PARAM_FORMAT_ERROR_CODE, "账号或密码格式错误", nil)
 		return
 	}
-	user, err := u.svc.Login(context, req.Email, req.Password)
+	user, err := u.svc.Login(context, req.PhoneNumber, req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, service.UserNotExistsErr) || errors.Is(err, service.PasswordNotRightErr) {
 			result.RespWithError(context, result.EMAIL_OR_PASSWORD_ERROR_CODE, "用户名或密码错误", nil)
@@ -107,9 +120,10 @@ func (u *UserHandler) Login(context *gin.Context) {
 		result.RespWithError(context, result.UNKNOWN_ERROR_CODE, "服务内部异常，请联系管理员", nil)
 	}
 	result.RespWithSuccess(context, "登录成功", &UserLoginResp{
-		UserId: user.Id,
-		Email:  user.Email,
-		Token:  jwtauth.GenerateToken(user.Id),
+		UserId:   user.Id,
+		NickName: user.NickName,
+		Email:    user.Email,
+		Token:    jwtauth.GenerateToken(user.Id),
 	})
 }
 
@@ -136,8 +150,9 @@ func (u *UserHandler) Profile(context *gin.Context) {
 		return
 	}
 	result.RespWithSuccess(context, "获取成功", &UserProfileResp{
-		UserId: res.Id,
-		Email:  res.Email,
+		UserId:   res.Id,
+		Email:    res.Email,
+		NickName: res.NickName,
 	})
 }
 

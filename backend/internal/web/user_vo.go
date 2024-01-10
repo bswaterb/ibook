@@ -4,31 +4,36 @@ import "strings"
 
 type UserSignupReq struct {
 	Email           string `json:"email" binding:"required"`
+	NickName        string `json:"nickName"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
 }
 
 type UserSignupResp struct {
-	UserId int64  `json:"userId"`
-	Email  string `json:"email"`
-	Token  string `json:"token"`
+	UserId   int64  `json:"userId"`
+	NickName string `json:"nickName"`
+	Email    string `json:"email"`
+	Token    string `json:"token"`
 }
 
 type UserLoginReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email       string `json:"email"`
+	PhoneNumber string `json:"phoneNumber"`
+	Password    string `json:"password"`
 }
 
 type UserLoginResp struct {
 	UserId      int64  `json:"userId"`
+	NickName    string `json:"nickName"`
 	PhoneNumber string `json:"phoneNumber"`
 	Email       string `json:"email"`
 	Token       string `json:"token"`
 }
 
 type UserProfileResp struct {
-	UserId int64  `json:"userId"`
-	Email  string `json:"email"`
+	UserId   int64  `json:"userId"`
+	NickName string `json:"nickName"`
+	Email    string `json:"email"`
 }
 
 type UserSmsLoginSendReq struct {
