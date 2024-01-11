@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"ibook/internal/conf"
 	"ibook/internal/data"
-	"ibook/internal/data/article"
 	ratelimit2 "ibook/internal/data/message/sms/ratelimit"
 	"ibook/internal/service"
 	"ibook/internal/web"
@@ -36,10 +35,10 @@ func wireApp(secret *conf.Secret, mySQL *conf.MySQL, redis *conf.Redis, server *
 	verifyCodeRepo := data.NewVerifyCodeRepo(cmdable)
 	userService := service.NewUserService(userRepo, userCache, smsRepo, verifyCodeRepo)
 	userHandler := web.NewUserHandler(userService)
-	articleAuthorRepo := article.NewArticleAuthorRepo(dataData)
-	articleReaderRepo := article.NewArticleReaderRepo(dataData)
-	articleSyncRepo := article.NewArticleSyncRepo(dataData)
+	articleAuthorRepo := data.NewArticleAuthorRepo(dataData)
 	loggerLogger := logger.NewZapLogger()
+	articleReaderRepo := data.NewArticleReaderRepo(dataData, loggerLogger)
+	articleSyncRepo := data.NewArticleSyncRepo(dataData, loggerLogger)
 	articleService := service.NewArticleService(articleAuthorRepo, articleReaderRepo, articleSyncRepo, loggerLogger)
 	articleHandler := web.NewArticleHandler(articleService, loggerLogger)
 	v := newMiddleware(secret, loggerLogger, cmdable)

@@ -130,8 +130,8 @@ func (service *articleService) WithDrawArticle(ctx *gin.Context, articleId, auth
 	return service.sr.SyncUpdateStatus(ctx, articleId, authorId, ArticleStatusPrivate)
 }
 
-func (service *articleService) ListPubArticles(ctx *gin.Context, userId int64, offset int64, limit int64) ([]*Article, error) {
-	if userId <= 0 {
+func (service *articleService) ListPubArticles(ctx *gin.Context, authorId int64, offset int64, limit int64) ([]*Article, error) {
+	if authorId <= 0 {
 		// 获取全部文章列表
 		articles, err := service.rr.ListAll(ctx, offset, limit)
 		if err != nil {
@@ -140,7 +140,7 @@ func (service *articleService) ListPubArticles(ctx *gin.Context, userId int64, o
 		return articles, nil
 	} else {
 		// 获取指定作者 id 的文章列表
-		articles, err := service.rr.ListById(ctx, userId, offset, limit)
+		articles, err := service.rr.ListById(ctx, authorId, offset, limit)
 		if err != nil {
 			// 出错
 		}

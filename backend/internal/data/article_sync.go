@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"ibook/internal/service"
+	"ibook/pkg/utils/logger"
 )
 
 type Article struct {
@@ -18,7 +19,8 @@ type Article struct {
 }
 
 type articleSyncRepo struct {
-	data *Data
+	data   *Data
+	logger logger.Logger
 }
 
 // Sync 同步发表文章，文章 status 都应为 published
@@ -45,7 +47,7 @@ func (repo *articleSyncRepo) Sync(ctx *gin.Context, articleA *service.ArticleAut
 			}
 		}
 		articleR.Id = articleA.Id
-		readerRepo := NewArticleReaderRepo(repo.data)
+		readerRepo := NewArticleReaderRepo(repo.data, repo.logger)
 		return readerRepo.UpsertArticle(ctx, articleR)
 	})
 	return err
@@ -55,7 +57,7 @@ func (repo *articleSyncRepo) SyncUpdateStatus(ctx *gin.Context, articleId int64,
 	err := repo.data.mdb.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		mdbData := &Data{mdb: tx}
 		authorRepo := NewArticleAuthorRepo(mdbData)
-		readerRepo := NewArticleReaderRepo(mdbData)
+		readerRepo := NewArticleReaderRepo(mdbData, repo.logger)
 		err := authorRepo.UpdateStatusById(ctx, articleId, authorId, status)
 		if err != nil {
 			return fmt.Errorf("同步更新文章状态时出错 - article_author: %w", err)
@@ -69,6 +71,6 @@ func (repo *articleSyncRepo) SyncUpdateStatus(ctx *gin.Context, articleId int64,
 	return err
 }
 
-func NewArticleSyncRepo(data *Data) service.ArticleSyncRepo {
-	return &articleSyncRepo{data: data}
+func NewArticleSyncRepo(data *Data, mylogger logger.Logger) service.ArticleSyncRepo {
+	return &articleSyncRepo{data: data, logger: mylogger}
 }

@@ -158,7 +158,7 @@ func (handler *ArticleHandler) PubList(ctx *gin.Context) {
 		})
 		result.RespWithError(ctx, result.UNKNOWN_ERROR_CODE, "用户未登录", nil)
 	}
-	articles, err := handler.svc.ListPubArticles(ctx, userId.(int64), req.Offset, req.Limit)
+	articles, err := handler.svc.ListPubArticles(ctx, req.AuthorId, req.Offset, req.Limit)
 	if err != nil {
 		l.Warn("获取文章列表失败", logger.Field{
 			Key:   "错误详情",
@@ -179,7 +179,8 @@ func (handler *ArticleHandler) PubList(ctx *gin.Context) {
 	}))
 }
 
-func (handler *ArticleHandler) PubDetail(context *gin.Context) {
+func (handler *ArticleHandler) PubDetail(ctx *gin.Context) {
+	// 从缓存中查找文章详情
 
 }
 

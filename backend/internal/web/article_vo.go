@@ -34,8 +34,9 @@ type ArticleWithdrawReply struct {
 }
 
 type ArticleListReq struct {
-	Offset int64 `json:"offset"`
-	Limit  int64 `json:"limit"`
+	AuthorId int64 `json:"authorId"`
+	Offset   int64 `json:"offset"`
+	Limit    int64 `json:"limit"`
 }
 
 type ArticleListReply struct {
