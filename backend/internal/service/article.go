@@ -28,6 +28,20 @@ type ArticleReaderRepo interface {
 type ArticleSyncRepo interface {
 	Sync(ctx *gin.Context, articleA *ArticleAuthor, articleR *ArticleReader) error
 	SyncUpdateStatus(ctx *gin.Context, articleId int64, authorId int64, status uint8) error
+	UpsertLikeInfo(ctx *gin.Context, userId int64, articleId int64) error
+	CancelLikeInfo(ctx *gin.Context, userId int64, articleId int64) error
+}
+
+type ArticleInteractiveRepo interface {
+	IncrReadCount(ctx *gin.Context, articleId int64) error
+	IncrLikeCnt(ctx *gin.Context, articleId int64) error
+	DecrLikeCnt(ctx *gin.Context, articleId int64) error
+}
+
+type ArticleInteractiveCache interface {
+	IncrReadCountInCache(ctx *gin.Context, articleId int64) error
+	IncrLikeCountInCache(ctx *gin.Context, articleId int64) error
+	DecrLikeCountInCache(ctx *gin.Context, articleId int64) error
 }
 
 type ArticleService interface {
@@ -36,17 +50,22 @@ type ArticleService interface {
 	WithDrawArticle(ctx *gin.Context, articleId, userId int64) error
 	GetArticleDetail(ctx *gin.Context, articleId int64, userId int64) (*Article, error)
 	ListPubArticles(ctx *gin.Context, userId int64, offset int64, limit int64) ([]*Article, error)
+	IncrReadCount(ctx *gin.Context, articleId int64) error
+	LikeArticle(ctx *gin.Context, userId int64, articleId int64) error
+	CancelLikeArticle(ctx *gin.Context, userId int64, articleId int64) error
 }
 
 type articleService struct {
 	ar     ArticleAuthorRepo
 	rr     ArticleReaderRepo
 	sr     ArticleSyncRepo
+	air    ArticleInteractiveRepo
+	aic    ArticleInteractiveCache
 	logger mylogger.Logger
 }
 
-func NewArticleService(ar ArticleAuthorRepo, rr ArticleReaderRepo, sr ArticleSyncRepo, logger mylogger.Logger) ArticleService {
-	return &articleService{ar: ar, rr: rr, sr: sr, logger: logger}
+func NewArticleService(ar ArticleAuthorRepo, rr ArticleReaderRepo, sr ArticleSyncRepo, air ArticleInteractiveRepo, logger mylogger.Logger) ArticleService {
+	return &articleService{ar: ar, rr: rr, sr: sr, air: air, logger: logger}
 }
 
 func (service *articleService) EditArticle(ctx *gin.Context, article *Article) error {
@@ -155,4 +174,40 @@ func (service *articleService) GetArticleDetail(ctx *gin.Context, articleId int6
 		return nil, fmt.Errorf("查询出错，文章不存在或用户不匹配")
 	}
 	return article, nil
+}
+
+func (service *articleService) IncrReadCount(ctx *gin.Context, articleId int64) error {
+	err := service.air.IncrReadCount(ctx, articleId)
+	if err != nil {
+		return err
+	}
+	return service.aic.IncrReadCountInCache(ctx, articleId)
+}
+
+func (service *articleService) LikeArticle(ctx *gin.Context, userId int64, articleId int64) error {
+	// 1. 在点赞记录表中插入记录，并更新文章表中的点赞计数
+	err := service.sr.UpsertLikeInfo(ctx, userId, articleId)
+	if err != nil {
+		return err
+	}
+	// 2. 在缓存中更新点赞计数
+	err = service.aic.IncrLikeCountInCache(ctx, articleId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *articleService) CancelLikeArticle(ctx *gin.Context, userId int64, articleId int64) error {
+	// 1. 在点赞记录表中改变记录状态，并更新文章表中的点赞计数
+	err := service.sr.CancelLikeInfo(ctx, userId, articleId)
+	if err != nil {
+		return err
+	}
+	// 2. 在缓存中更新点赞计数
+	err = service.aic.DecrLikeCountInCache(ctx, articleId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

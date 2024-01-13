@@ -40,13 +40,26 @@ type ArticleListReq struct {
 }
 
 type ArticleListReply struct {
-	Articles []Article `json:"articles"`
+	Articles []*Article `json:"articles"`
 }
 
 type GetArticleReply struct {
 	Id      int64  `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
+}
+
+type LikeArticleReq struct {
+	ArticleId int64 `json:"articleId"`
+	// 1 -> 从不喜欢改为喜欢  0 -> 从喜欢改为不喜欢
+	Like int64 `json:"like"`
+}
+
+type LikeArticleReply struct {
+	OK bool `json:"ok"`
+	// "like" or "normal" or "dislike"
+	// 喜欢 / 默认 / 踩
+	CurrentStatus string `json:"currentStatus"`
 }
 
 type Article struct {

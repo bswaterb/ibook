@@ -35,6 +35,7 @@ func (handler *ArticleHandler) RegisterRoutesV1(server *gin.Engine) {
 	ug.GET("/pub/list", handler.PubList)
 	ug.GET("/pub/detail/:id", handler.PubDetail)
 	ug.GET("/detail/:id", handler.Detail)
+	ug.POST("/pub/like", handler.Like)
 }
 
 func (handler *ArticleHandler) Edit(ctx *gin.Context) {
@@ -165,23 +166,49 @@ func (handler *ArticleHandler) PubList(ctx *gin.Context) {
 			Value: err,
 		})
 	}
-	result.RespWithSuccess(ctx, "获取成功", slice.Map[*service.Article, *Article](articles, func(idx int, src *service.Article) *Article {
-		return &Article{
-			Id:          src.Id,
-			Title:       src.Title,
-			Abstract:    src.GenAbstract(),
-			Status:      uint8(src.Status),
-			AuthorId:    src.Author.Id,
-			AuthorName:  src.Author.Name,
-			UpdatedTime: time.Unix(src.UpdatedTime, 0).Local().Format(time.DateTime),
-			CreatedTime: time.Unix(src.CreatedTime, 0).Local().Format(time.DateTime),
-		}
-	}))
+	result.RespWithSuccess(ctx, "获取成功",
+		&ArticleListReply{
+			Articles: slice.Map[*service.Article, *Article](articles, func(idx int, src *service.Article) *Article {
+				return &Article{
+					Id:          src.Id,
+					Title:       src.Title,
+					Abstract:    src.GenAbstract(),
+					Status:      uint8(src.Status),
+					AuthorId:    src.Author.Id,
+					AuthorName:  src.Author.Name,
+					UpdatedTime: time.Unix(src.UpdatedTime, 0).Local().Format(time.DateTime),
+					CreatedTime: time.Unix(src.CreatedTime, 0).Local().Format(time.DateTime),
+				}
+			}),
+		},
+	)
 }
 
 func (handler *ArticleHandler) PubDetail(ctx *gin.Context) {
+	articleId := ctx.Param("id")
+	if articleId == "" {
+		result.RespWithError(ctx, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	id, err := strconv.Atoi(articleId)
+	if err != nil || id <= 0 {
+		result.RespWithError(ctx, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	l := logger.TagCtxLogger(ctx, handler.logger, "ArticleHandler-PubDetail")
 	// 从缓存中查找文章详情
 
+	//增加计数
+	go func() {
+		err := handler.svc.IncrReadCount(ctx, int64(id))
+		if err != nil {
+			// 打日志
+			l.Warn("异步增加文章阅读计数时出错：", logger.Field{
+				Key:   "详情",
+				Value: err,
+			})
+		}
+	}()
 }
 
 func (handler *ArticleHandler) Detail(context *gin.Context) {
@@ -216,4 +243,45 @@ func (handler *ArticleHandler) Detail(context *gin.Context) {
 		Title:   article.Title,
 		Content: article.Content,
 	})
+}
+
+func (handler *ArticleHandler) Like(ctx *gin.Context) {
+	l := logger.TagCtxLogger(ctx, handler.logger, "ArticleHandler-Like")
+	var req *LikeArticleReq
+	if err := request.ParseRequestBody(ctx, req); err != nil {
+		result.RespWithError(ctx, result.PARAM_NOT_EQUAL_CODE, "请求传参或设置有误", nil)
+		return
+	}
+	userId, exists := ctx.Get("userId")
+	if !exists || userId.(int64) < 0 {
+		l.Error("未成功从 token 提取 userId", logger.Field{
+			Key:   "token错误",
+			Value: nil,
+		})
+		result.RespWithError(ctx, result.UNKNOWN_ERROR_CODE, "用户未登录", nil)
+	}
+	// 本次标记为喜欢
+	var err error
+	var status string
+	if req.Like == 1 {
+		err = handler.svc.LikeArticle(ctx, userId.(int64), req.ArticleId)
+		status = "like"
+	} else {
+		err = handler.svc.CancelLikeArticle(ctx, userId.(int64), req.ArticleId)
+		status = "normal"
+	}
+	if err != nil {
+		l.Warn("用户赞/取消赞文章失败", logger.Field{
+			Key:   "详情",
+			Value: err,
+		})
+		result.RespWithError(ctx, result.PARAM_NOT_EQUAL_CODE, "服务内部错误", nil)
+		return
+	}
+
+	result.RespWithSuccess(ctx, "操作成功", &LikeArticleReply{
+		OK:            true,
+		CurrentStatus: status,
+	})
+
 }
